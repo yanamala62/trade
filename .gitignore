@@ -1,0 +1,47 @@
+# Environment variables & secrets
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+
+# Node & Frontend
+node_modules/
+frontend/dist/
+frontend/android/app/build/
+frontend/android/.gradle/
+frontend/android/build/
+.oxlint-cache/
+
+# Databases & local sqlite
+*.db
+*.db-journal
+*.sqlite3
+
+# Logs & temp
+*.log
+.DS_Store
+Thumbs.db

@@ -50,22 +50,35 @@ trading_app/
 
 ---
 
+## 📦 Decoupled Architecture & Standalone Deployments
+
+Both the **Backend** and **Frontend** are 100% decoupled and can be deployed to separate servers or repositories independently:
+
+* **Backend (`/backend`)**: Completely self-contained FastAPI server with its own `Dockerfile`, `docker-compose.yml`, `.env.example`, and dependencies. Can be deployed to Render, Railway, AWS, DigitalOcean, or Docker without the frontend.
+* **Frontend (`/frontend`)**: Completely self-contained React 19 + Vite web application with its own `Dockerfile`, `nginx.conf`, `.env.example`, and native Android Capacitor project. Can be deployed to Vercel, Netlify, or Docker, and built into an Android APK without the backend source code.
+
+---
+
 ## ⚡ Quickstart
 
-### 1. Run the Backend
+### 1. Run the Backend (Standalone)
 ```bash
 cd backend
+pip install -r requirements.txt
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 The REST API will be available at `http://localhost:8000/api` and WebSocket at `ws://localhost:8000/ws/live`.
+See [backend/README.md](backend/README.md) for independent Docker, Render, and VPS deployment instructions.
 
-### 2. Run the Frontend (Web)
+### 2. Run the Frontend (Standalone Web)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 Open `http://localhost:5173` in your browser.
+Set `VITE_BACKEND_URL=https://your-deployed-backend.com` in `frontend/.env` to point to a remote backend.
+See [frontend/README.md](frontend/README.md) for independent Vercel, Netlify, and Docker deployment instructions.
 
 ### 3. Run Backend Test Suite
 ```bash

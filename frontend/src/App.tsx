@@ -8,6 +8,7 @@ import {
   BookOpen,
   ListFilter,
   BarChart2,
+  Target,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { Watchlist } from './components/Watchlist';
@@ -17,6 +18,7 @@ import { TimeMachineView } from './components/TimeMachineView';
 import { AccuracyScoreboard } from './components/AccuracyScoreboard';
 import { TradeJournal } from './components/TradeJournal';
 import { SettingsModal } from './components/SettingsModal';
+import { OpportunityRadar } from './components/OpportunityRadar';
 import { fetchHealth, fetchSignals, getWebSocketUrl } from './services/api';
 import { TickData, SignalSuggestion } from './types';
 
@@ -129,7 +131,7 @@ const INITIAL_WATCHLIST: Record<string, TickData> = {
 };
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'TERMINAL' | 'SIGNALS' | 'TIME_MACHINE' | 'SCOREBOARD' | 'JOURNAL'>('TERMINAL');
+  const [activeTab, setActiveTab] = useState<'RADAR' | 'TERMINAL' | 'SIGNALS' | 'TIME_MACHINE' | 'SCOREBOARD' | 'JOURNAL'>('RADAR');
   const [mobileTerminalView, setMobileTerminalView] = useState<'CHART' | 'WATCHLIST'>('CHART');
   const [selectedSymbol, setSelectedSymbol] = useState<string>('RELIANCE');
   const [ticks, setTicks] = useState<Record<string, TickData>>(INITIAL_WATCHLIST);
@@ -247,6 +249,17 @@ export function App() {
       <div className="hidden md:flex items-center justify-between px-6 py-2 bg-slate-900 border-b border-slate-800 text-xs">
         <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
           <button
+            onClick={() => setActiveTab('RADAR')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition ${
+              activeTab === 'RADAR'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Target className="w-4 h-4 text-amber-400" />
+            <span className="font-semibold">Opportunity Radar</span>
+          </button>
+          <button
             onClick={() => setActiveTab('TERMINAL')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition ${
               activeTab === 'TERMINAL'
@@ -322,6 +335,19 @@ export function App() {
 
       {/* 3. Main Workspace Area */}
       <main className="flex-1 overflow-hidden relative">
+        {/* VIEW RADAR: AI OPPORTUNITY RADAR & FULL LIVE CHART */}
+        {activeTab === 'RADAR' && (
+          <div className="h-full w-full">
+            <OpportunityRadar
+              ticks={ticks}
+              selectedSymbol={selectedSymbol}
+              onSelectSymbol={(sym) => setSelectedSymbol(sym)}
+              onNavigateToTerminal={() => setActiveTab('TERMINAL')}
+              onNavigateToReplay={() => setActiveTab('TIME_MACHINE')}
+            />
+          </div>
+        )}
+
         {/* VIEW A: TERMINAL */}
         {activeTab === 'TERMINAL' && (
           <div className="flex flex-col md:flex-row h-full w-full">
@@ -422,6 +448,15 @@ export function App() {
 
       {/* 4. Mobile Bottom Navigation Bar (Capacitor Safe-Area Aware) */}
       <nav className="flex md:hidden items-center justify-around bg-slate-900/95 border-t border-slate-800 pb-safe pt-2 backdrop-blur-md z-40">
+        <button
+          onClick={() => setActiveTab('RADAR')}
+          className={`flex flex-col items-center py-1 px-2 text-[10px] font-medium transition ${
+            activeTab === 'RADAR' ? 'text-indigo-400 font-bold' : 'text-slate-400'
+          }`}
+        >
+          <Target className="w-5 h-5 mb-0.5 text-amber-400" />
+          <span>Radar</span>
+        </button>
         <button
           onClick={() => setActiveTab('TERMINAL')}
           className={`flex flex-col items-center py-1 px-2 text-[10px] font-medium transition ${

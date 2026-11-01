@@ -170,3 +170,73 @@ export interface TrackedTrade {
   status: 'WATCHING' | 'TRIGGERED' | 'TARGET_1_HIT' | 'TARGET_2_HIT' | 'STOPPED_OUT' | 'SQUARED_OFF' | string;
   timestamp?: string;
 }
+
+export interface CandidateProfile {
+  market_cap?: string;
+  sector?: string;
+  beta?: number;
+  atr_14?: number;
+  atr_pct?: number;
+  daily_avg_range_pct?: number;
+  volatility_rank?: string;
+  expected_session_move?: string;
+  risk_reward_ratio?: string;
+}
+
+export interface ChartAnalysisDetails {
+  trend_regime?: string;
+  vwap_status?: string;
+  rsi_momentum?: string;
+  volume_intensity?: string;
+  candlestick_structure?: string;
+  target_methodology?: string;
+  key_levels?: {
+    entry_0915?: number;
+    vwap_support?: number;
+    vwap_resistance?: number;
+    ema_9?: number;
+    ema_21?: number;
+    stop_loss?: number;
+    target_1500?: number;
+  };
+}
+
+export interface SessionTimeline {
+  phase_0915_entry?: string;
+  phase_1130_hold?: string;
+  phase_1500_exit?: string;
+}
+
+export interface ScreenerCandidate {
+  symbol: string;
+  name: string;
+  sector: string;
+  market_cap?: string;
+  ltp: number;
+  direction: 'RISE' | 'FALL';
+  expected_pct: number;
+  target: number;
+  stop_loss: number;
+  probability: number;
+  confidence_grade: string;
+  setup: string;
+  reasons: string[];
+  time_horizon: string;
+  profile?: CandidateProfile;
+  chart_analysis?: ChartAnalysisDetails;
+  why_it_will_raise?: string[];
+  session_timeline?: SessionTimeline;
+}
+
+export interface ScreenerResponse {
+  horizon: string;
+  horizon_label: string;
+  description: string;
+  total_scanned: number;
+  bullish_count: number;
+  bearish_count: number;
+  bullish: ScreenerCandidate[];
+  bearish: ScreenerCandidate[];
+  timestamp: string;
+}
+

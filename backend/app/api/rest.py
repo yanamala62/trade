@@ -18,6 +18,7 @@ from app.backtest.replay import BacktestReplayEngine
 from app.llm.explainer import LLMExplainer
 from app.llm.news_summary import NewsSummarizer
 from app.ingest.news_ingestor import NewsIngestor
+from app.signals.scanner import scan_market_opportunities
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -276,6 +277,15 @@ async def get_tracked():
     """Returns active tracked positions with P&L."""
     trades = await repo.get_tracked_trades(active_only=False)
     return trades
+
+
+@router.get("/screener")
+async def get_screener_opportunities(horizon: str = Query("915_1500", pattern="^(10m|1h|1d|2d|3d|1w|915_1500)$")):
+    """
+    Screener / Opportunity Radar: Scans NSE stocks and returns high-probability
+    candidates likely to RISE or FALL across the requested time horizon (915_1500, 10m, 1h, 1d, 2d, 3d, 1w).
+    """
+    return await scan_market_opportunities(horizon=horizon)
 
 
 @router.get("/accuracy")

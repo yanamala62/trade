@@ -31,6 +31,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
   const vwapSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const ema9SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const ema21SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const priceLinesRef = useRef<any[]>([]);
 
   const [timeframe, setTimeframe] = useState<'1m' | '5m' | '15m'>('5m');
   const [showIndicators, setShowIndicators] = useState(true);
@@ -210,9 +211,19 @@ export const LiveChart: React.FC<LiveChartProps> = ({
       ema21SeriesRef.current?.setData([]);
     }
 
+    // Clear previous Signal Price Lines
+    if (candleSeriesRef.current) {
+      priceLinesRef.current.forEach((line) => {
+        try {
+          candleSeriesRef.current?.removePriceLine(line);
+        } catch (_) {}
+      });
+      priceLinesRef.current = [];
+    }
+
     // Add Signal Price Lines if Active
-    if (activeSignal && activeSignal.symbol === symbol) {
-      candleSeriesRef.current.createPriceLine({
+    if (candleSeriesRef.current && activeSignal && activeSignal.symbol === symbol) {
+      const entryLine = candleSeriesRef.current.createPriceLine({
         price: activeSignal.entry,
         color: '#06b6d4',
         lineWidth: 2,
@@ -220,7 +231,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
         axisLabelVisible: true,
         title: `ENTRY (₹${activeSignal.entry})`,
       });
-      candleSeriesRef.current.createPriceLine({
+      const slLine = candleSeriesRef.current.createPriceLine({
         price: activeSignal.stop_loss,
         color: '#ef4444',
         lineWidth: 2,
@@ -228,7 +239,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
         axisLabelVisible: true,
         title: `SL (₹${activeSignal.stop_loss})`,
       });
-      candleSeriesRef.current.createPriceLine({
+      const t1Line = candleSeriesRef.current.createPriceLine({
         price: activeSignal.target_1,
         color: '#10b981',
         lineWidth: 2,
@@ -236,6 +247,7 @@ export const LiveChart: React.FC<LiveChartProps> = ({
         axisLabelVisible: true,
         title: `T1 (₹${activeSignal.target_1})`,
       });
+      priceLinesRef.current = [entryLine, slLine, t1Line];
     }
 
     chartRef.current?.timeScale().fitContent();

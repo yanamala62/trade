@@ -1,10 +1,16 @@
-import { TickData, Candle, SignalSuggestion, AnalysisResponse, AccuracyData, TrackedTrade } from '../types';
+import { TickData, Candle, SignalSuggestion, AnalysisResponse, AccuracyData, TrackedTrade, ScreenerResponse, ScreenerCandidate } from '../types';
 
 const STORAGE_KEY_API_HOST = 'ai_trade_assist_backend_url';
 
 export function getBackendBaseUrl(): string {
   const saved = localStorage.getItem(STORAGE_KEY_API_HOST);
   if (saved) return saved;
+
+  // Check Vite build-time environment variable (e.g. on Vercel, Netlify, Cloudflare)
+  const envUrl = (import.meta as any).env?.VITE_BACKEND_URL || (import.meta as any).env?.VITE_API_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
 
   // In Android Emulator, 10.0.2.2 maps to host PC localhost
   if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
@@ -118,6 +124,18 @@ export async function trackNewTrade(tradeData: Partial<TrackedTrade>): Promise<b
   } catch (err) {
     console.error('[API] Failed to track trade:', err);
     return false;
+  }
+}
+
+export async function fetchScreenerOpportunities(horizon: string = '10m'): Promise<ScreenerResponse | null> {
+  const base = getBackendBaseUrl();
+  try {
+    const res = await fetch(`${base}/api/screener?horizon=${encodeURIComponent(horizon)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] Failed to fetch screener data:', err);
+    return null;
   }
 }
 

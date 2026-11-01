@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tradeassist_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - ACTIVE_BROKER=REAL_NSE_PUBLIC
+      - DATABASE_URL=sqlite+aiosqlite:///./ai_trade_assist.db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    volumes:
+      - backend_data:/app
+
+  redis:
+    image: redis:7-alpine
+    container_name: tradeassist_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  backend_data:
+  redis_data:
