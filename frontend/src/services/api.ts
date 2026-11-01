@@ -4,25 +4,20 @@ const STORAGE_KEY_API_HOST = 'ai_trade_assist_backend_url';
 
 export function getBackendBaseUrl(): string {
   const saved = localStorage.getItem(STORAGE_KEY_API_HOST);
-  if (saved) return saved;
+  // Respect saved custom host unless it's a stale localhost address while viewing on a deployed host
+  const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  if (saved && (isLocalHost || !saved.includes('localhost'))) {
+    return saved.trim().replace(/\/+$/, '');
+  }
 
-  // Check Vite build-time environment variable (e.g. on Vercel, Netlify, Cloudflare)
+  // Check Vite build-time environment variable (e.g. on Netlify, Render, Vercel)
   const envUrl = (import.meta as any).env?.VITE_BACKEND_URL || (import.meta as any).env?.VITE_API_URL;
   if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
     return envUrl.trim().replace(/\/+$/, '');
   }
 
-  // In Android Emulator, 10.0.2.2 maps to host PC localhost
-  if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
-    // Check if on emulator or standard device default
-    return 'http://10.0.2.2:8000';
-  }
-
-  // Web fallback
-  if (typeof window !== 'undefined' && window.location.hostname) {
-    return `http://${window.location.hostname}:8000`;
-  }
-  return 'http://localhost:8000';
+  // Live Render production backend by default for web and Android APK
+  return 'https://trade-yccn.onrender.com';
 }
 
 export function setBackendBaseUrl(url: string): void {

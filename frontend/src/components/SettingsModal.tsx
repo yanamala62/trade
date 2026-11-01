@@ -45,14 +45,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
             Backend API & WebSocket Host
           </label>
           <p className="text-xs text-slate-400">
-            For Android APK or emulator, enter your PC local IP (e.g. <code className="text-indigo-300">http://192.168.1.5:8000</code> or <code className="text-indigo-300">http://10.0.2.2:8000</code>).
+            Render live backend: <code className="text-indigo-300">https://trade-yccn.onrender.com</code>, or local PC IP for offline emulator testing.
           </p>
           <input
             type="text"
             value={hostUrl}
             onChange={(e) => setHostUrl(e.target.value)}
             className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white focus:outline-hidden focus:border-indigo-500 font-mono"
-            placeholder="http://localhost:8000"
+            placeholder="https://trade-yccn.onrender.com"
           />
         </div>
 

@@ -1,0 +1,22 @@
+# Netlify Root Configuration (when repository base is root)
+[build]
+  base = "frontend"
+  publish = "frontend/dist"
+  command = "npm run build"
+
+[build.environment]
+  VITE_BACKEND_URL = "https://trade-yccn.onrender.com"
+
+# SPA Fallback: Route all client-side navigation to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security and cache headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer-when-downgrade"

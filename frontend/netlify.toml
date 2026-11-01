@@ -3,6 +3,9 @@
   publish = "dist"
   command = "npm run build"
 
+[build.environment]
+  VITE_BACKEND_URL = "https://trade-yccn.onrender.com"
+
 # SPA Fallback: Route all client-side navigation to index.html
 [[redirects]]
   from = "/*"
