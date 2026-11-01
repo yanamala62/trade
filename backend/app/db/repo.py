@@ -1,6 +1,9 @@
+import os
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.engine.url import make_url
 from sqlalchemy import select, update, desc, delete
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
@@ -9,8 +12,19 @@ from app.db.models import (
     Base, CandleModel, SignalModel, TrackedTradeModel, TradeEventModel, SystemHealthModel
 )
 
+def _init_engine():
+    db_url = settings.DATABASE_URL
+    try:
+        url = make_url(db_url)
+        if url.drivername.startswith("sqlite") and url.database and url.database != ":memory:":
+            db_path = Path(url.database).resolve()
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    return create_async_engine(db_url, echo=False)
+
 # Initialize engine & session maker
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
+engine = _init_engine()
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,

@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import List
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -18,8 +18,18 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
     # Storage
-    DATABASE_URL: str = f"sqlite+aiosqlite:///{DEFAULT_DB_PATH}"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./ai_trade_assist.db"
     REDIS_URL: str = "redis://localhost:6379/0"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def sanitize_database_url(cls, v: str) -> str:
+        if not v:
+            return "sqlite+aiosqlite:///./ai_trade_assist.db"
+        # If on non-Windows (e.g. Linux container/Render) and URL contains a Windows drive path
+        if os.name != "nt" and (":/" in str(v) or ":\\" in str(v)):
+            return "sqlite+aiosqlite:///./ai_trade_assist.db"
+        return str(v)
 
     # Broker settings
     # Options: ANGEL_ONE | FYERS | REAL_NSE_PUBLIC | MOCK
