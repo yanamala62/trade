@@ -106,8 +106,47 @@ async def get_candles(symbol: str, timeframe: str = "5m", limit: int = 150):
 @router.get("/signals")
 async def get_active_signals(status: Optional[str] = None, limit: int = 30):
     """Returns recent trade suggestions."""
+    import json
     signals = await repo.get_signals(limit=limit, status=status)
-    return signals
+    out = []
+    for s in signals:
+        reasons_data = s.reasons
+        if isinstance(reasons_data, str):
+            try:
+                reasons_data = json.loads(reasons_data)
+            except Exception:
+                reasons_data = [reasons_data] if reasons_data else []
+
+        checks_data = s.risk_gate_checks
+        if isinstance(checks_data, str):
+            try:
+                checks_data = json.loads(checks_data)
+            except Exception:
+                checks_data = []
+
+        out.append({
+            "id": s.id,
+            "symbol": s.symbol,
+            "setup": s.setup,
+            "side": s.side,
+            "entry": s.entry,
+            "stop_loss": s.stop_loss,
+            "target_1": s.target_1,
+            "target_2": s.target_2,
+            "quantity": s.quantity,
+            "reward_risk": s.reward_risk,
+            "confidence_grade": s.confidence_grade,
+            "status": s.status,
+            "reasons": reasons_data,
+            "risk_gate": {
+                "status": s.risk_gate_status,
+                "checks": checks_data,
+                "reasons": [c.get("detail", "") for c in checks_data if isinstance(c, dict) and not c.get("passed", True)]
+            },
+            "llm_explanation": s.llm_explanation,
+            "timestamp": s.created_at.isoformat() if s.created_at else ""
+        })
+    return out
 
 
 @router.post("/analyse")

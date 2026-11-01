@@ -91,6 +91,12 @@ export const SignalsPanel: React.FC<SignalsPanelProps> = ({
             const isBuy = sig.side === 'BUY';
             const isExpanded = expandedId === sig.id;
             const isTracked = trackedIds.has(sig.id);
+            const rawReasons: any = sig.reasons;
+            const reasonsList: string[] = Array.isArray(rawReasons)
+              ? rawReasons
+              : (typeof rawReasons === 'string' && rawReasons.startsWith('[')
+                ? (() => { try { return JSON.parse(rawReasons); } catch { return [rawReasons]; } })()
+                : (rawReasons ? [String(rawReasons)] : []));
 
             return (
               <div
@@ -173,9 +179,9 @@ export const SignalsPanel: React.FC<SignalsPanelProps> = ({
                 </div>
 
                 {/* Reasons List */}
-                {sig.reasons && sig.reasons.length > 0 && (
+                {reasonsList.length > 0 && (
                   <div className="space-y-1 mb-3">
-                    {sig.reasons.map((r, i) => (
+                    {reasonsList.map((r, i) => (
                       <div key={i} className="text-[11px] text-slate-300 flex items-start gap-1.5">
                         <span className="text-indigo-400 font-bold">•</span>
                         <span>{r}</span>

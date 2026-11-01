@@ -1,6 +1,11 @@
+import os
+from pathlib import Path
 from typing import List
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_DB_PATH = (BACKEND_DIR / "ai_trade_assist.db").as_posix()
 
 
 class Settings(BaseSettings):
@@ -13,7 +18,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
     # Storage
-    DATABASE_URL: str = "sqlite+aiosqlite:///./ai_trade_assist.db"
+    DATABASE_URL: str = f"sqlite+aiosqlite:///{DEFAULT_DB_PATH}"
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Broker settings
@@ -65,7 +70,7 @@ class Settings(BaseSettings):
     INDEX_SYMBOLS: List[str] = ["^NSEI", "^NSEBANK", "^INDIAVIX"]
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=[str(BACKEND_DIR.parent / ".env"), str(BACKEND_DIR / ".env"), ".env"],
         env_file_encoding="utf-8",
         extra="ignore"
     )
