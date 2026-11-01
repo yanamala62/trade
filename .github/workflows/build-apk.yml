@@ -41,7 +41,14 @@ jobs:
         run: |
           cd frontend/android
           chmod +x gradlew
-          ./gradlew assembleDebug -x lint -x checkDebugAarMetadata --no-daemon --stacktrace
+          ./gradlew assembleDebug -x lint -x checkDebugAarMetadata --no-daemon --stacktrace 2>&1 | tee /tmp/gradle.log || BUILD_STATUS=$?
+          if [ "${BUILD_STATUS:-0}" -ne 0 ]; then
+            echo "### Gradle Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo '```text' >> $GITHUB_STEP_SUMMARY
+            tail -n 80 /tmp/gradle.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit $BUILD_STATUS
+          fi
 
       - name: Upload APK as Artifact
         uses: actions/upload-artifact@v4

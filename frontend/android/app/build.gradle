@@ -2,12 +2,10 @@ apply plugin: 'com.android.application'
 
 android {
     namespace = "com.aitradeassist.app"
-    compileSdk 36
+    compileSdk = 36
     compileSdkVersion 36
     defaultConfig {
         applicationId "com.aitradeassist.app"
-        minSdk 24
-        targetSdk 36
         minSdkVersion 24
         targetSdkVersion 36
         versionCode 1
