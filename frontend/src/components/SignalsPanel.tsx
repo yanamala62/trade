@@ -87,7 +87,7 @@ export const SignalsPanel: React.FC<SignalsPanelProps> = ({
           </div>
         ) : (
           signals.map((sig) => {
-            const isPassed = sig.risk_gate.status === 'PASS';
+            const isPassed = !sig.risk_gate || sig.risk_gate.status === 'PASS';
             const isBuy = sig.side === 'BUY';
             const isExpanded = expandedId === sig.id;
             const isTracked = trackedIds.has(sig.id);
@@ -185,9 +185,9 @@ export const SignalsPanel: React.FC<SignalsPanelProps> = ({
                 )}
 
                 {/* If Blocked, show failed checks */}
-                {!isPassed && sig.risk_gate.reasons?.length > 0 && (
+                {!isPassed && (sig.risk_gate?.reasons?.length ?? 0) > 0 && (
                   <div className="p-2 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] space-y-0.5 mb-2">
-                    {sig.risk_gate.reasons.map((reason, idx) => (
+                    {sig.risk_gate?.reasons?.map((reason, idx) => (
                       <div key={idx} className="flex items-center gap-1.5">
                         <AlertCircle className="w-3 h-3 shrink-0" />
                         <span>{reason}</span>

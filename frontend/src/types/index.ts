@@ -22,11 +22,18 @@ export interface Candle {
   volume: number;
 }
 
+export interface RiskGateCheck {
+  rule: string;
+  passed: boolean;
+  detail: string;
+}
+
 export interface RiskGateResult {
   status: 'PASS' | 'BLOCK';
-  checks_passed: string[];
-  checks_failed: string[];
-  reasons: string[];
+  checks?: RiskGateCheck[];
+  checks_passed?: string[];
+  checks_failed?: string[];
+  reasons?: string[];
 }
 
 export interface SignalSuggestion {
@@ -40,31 +47,56 @@ export interface SignalSuggestion {
   target_2: number;
   quantity: number;
   reward_risk: number;
-  confidence_grade: 'A' | 'B' | 'C';
+  confidence_grade: 'A' | 'B' | 'C' | string;
   reasons: string[];
-  risk_gate: RiskGateResult;
-  timestamp: string;
+  risk_gate?: RiskGateResult;
+  timestamp?: string;
   llm_explanation?: string;
+  status?: string;
+}
+
+export interface FanChartPoint {
+  step: number;
+  p10: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+}
+
+export interface BootstrapData {
+  target_hit_probability?: number;
+  stop_hit_probability?: number;
+  low_range?: number;
+  base_range?: number;
+  high_range?: number;
+  fan_chart?: FanChartPoint[];
 }
 
 export interface TimeMachineStats {
-  similar_regimes_found: number;
-  empirical_win_rate: number;
-  empirical_profit_factor: number;
-  median_days_to_target: number;
-  monte_carlo_p5: number;
-  monte_carlo_p25: number;
-  monte_carlo_p50: number;
-  monte_carlo_p75: number;
-  monte_carlo_p95: number;
-  confidence_grade: string;
+  similar_cases_found?: number;
+  similar_regimes_found?: number;
+  historical_win_rate?: number;
+  empirical_win_rate?: number;
+  empirical_profit_factor?: number;
+  avg_time_to_target_mins?: number;
+  median_days_to_target?: number;
+  max_adverse_excursion_pct?: number;
+  max_favorable_excursion_pct?: number;
+  confidence_grade?: string;
+  monte_carlo_p5?: number;
+  monte_carlo_p25?: number;
+  monte_carlo_p50?: number;
+  monte_carlo_p75?: number;
+  monte_carlo_p95?: number;
+  bootstrap?: BootstrapData;
 }
 
 export interface AnalysisResponse {
   symbol: string;
   name: string;
   sector: string;
-  verdict: 'BUY' | 'SELL_SHORT' | 'NO_TRADE';
+  verdict: 'BUY' | 'SELL_SHORT' | 'NO_TRADE' | string;
   snapshot: {
     ltp: number;
     day_high: number;
@@ -85,12 +117,15 @@ export interface AnalysisResponse {
 
 export interface AccuracySetupBreakdown {
   setup: string;
-  sample_size: number;
+  trades?: number;
+  sample_size?: number;
   win_rate: number;
   profit_factor: number;
-  expectancy_inr: number;
-  expectancy_r: number;
-  status: 'ACTIVE' | 'DOWNGRADED' | 'DISABLED';
+  expectancy_inr?: number;
+  expectancy_r?: number;
+  grade?: string;
+  sample_size_label?: string;
+  status?: 'ACTIVE' | 'DOWNGRADED' | 'DISABLED' | string;
 }
 
 export interface AccuracyData {
@@ -105,6 +140,17 @@ export interface AccuracyData {
     longest_losing_streak: number;
   };
   by_setup: AccuracySetupBreakdown[];
+  comparison?: {
+    backtest_win_rate: number;
+    paper_win_rate: number;
+    live_win_rate: number;
+    status: string;
+  };
+  system_health?: {
+    feed_uptime_pct: number;
+    stale_data_blocks_count: number;
+    price_mismatches_flagged: number;
+  };
 }
 
 export interface TrackedTrade {
@@ -119,8 +165,8 @@ export interface TrackedTrade {
   target_2: number;
   current_price: number;
   trailing_stop?: number;
-  pnl: number;
-  pnl_pct: number;
-  status: 'WATCHING' | 'TRIGGERED' | 'TARGET_1_HIT' | 'TARGET_2_HIT' | 'STOPPED_OUT' | 'SQUARED_OFF';
-  timestamp: string;
+  pnl?: number;
+  pnl_pct?: number;
+  status: 'WATCHING' | 'TRIGGERED' | 'TARGET_1_HIT' | 'TARGET_2_HIT' | 'STOPPED_OUT' | 'SQUARED_OFF' | string;
+  timestamp?: string;
 }
