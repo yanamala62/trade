@@ -1,8 +1,9 @@
 import logging
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Query, HTTPException, Depends
+from fastapi import APIRouter, Query, HTTPException, Depends, Header
 from pydantic import BaseModel
+import google.generativeai as genai
 
 from app.config import settings
 from app.ingest.instrument_master import search_instruments, get_instrument_by_symbol, NSE_INSTRUMENTS
@@ -61,6 +62,21 @@ async def get_system_health():
         "timestamp": datetime.utcnow().isoformat(),
         "disclaimer": "AI Trade Assist is a decision-support tool, not financial advice. No automated order placement."
     }
+
+
+@router.post("/ai/verify-key")
+async def verify_gemini_key(payload: Dict[str, str]):
+    """Verifies that a user-provided Google Gemini API key works."""
+    api_key = payload.get("api_key", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=400, detail="API key is required")
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(settings.GEMINI_MODEL)
+        res = await model.generate_content_async("Respond with 'OK' if you can read this message.")
+        return {"valid": True, "model": settings.GEMINI_MODEL, "response": res.text.strip()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Gemini API verification failed: {str(e)}")
 
 
 @router.get("/instruments/search")
@@ -151,7 +167,7 @@ async def get_active_signals(status: Optional[str] = None, limit: int = 30):
 
 
 @router.post("/analyse")
-async def run_stock_deep_analysis(req: AnalysisRequest):
+async def run_stock_deep_analysis(req: AnalysisRequest, x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key")):
     """
     Phase 5A: Single-Stock Deep Analysis.
     Combines snapshot, technical levels, relative strength, fundamentals, news,
@@ -194,7 +210,8 @@ async def run_stock_deep_analysis(req: AnalysisRequest):
 
     # 2. News & Disclosures
     news_items = await news_ingestor.get_news_for_symbol(sym)
-    news_summary = await news_summarizer.summarize_news(sym, news_items)
+    user_ai_key = x_gemini_api_key or settings.GEMINI_API_KEY
+    news_summary = await news_summarizer.summarize_news(sym, news_items, api_key=user_ai_key)
 
     # 3. Generate Trade Suggestion
     suggestion = signal_engine.evaluate_symbol(
@@ -215,7 +232,7 @@ async def run_stock_deep_analysis(req: AnalysisRequest):
     if suggestion and suggestion.risk_gate.status == "PASS":
         verdict = "BUY" if suggestion.side == "BUY" else "SELL_SHORT"
         suggestion_dict = suggestion.model_dump()
-        llm_expl = await llm_explainer.generate_explanation(suggestion_dict)
+        llm_expl = await llm_explainer.generate_explanation(suggestion_dict, api_key=user_ai_key)
         suggestion_dict["llm_explanation"] = llm_expl
 
     # 4. Time Machine & Monte Carlo Simulation

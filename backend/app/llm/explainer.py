@@ -40,7 +40,7 @@ class LLMExplainer:
             except Exception as e:
                 logger.warning(f"Could not initialize Gemini model: {e}")
 
-    async def generate_explanation(self, signal_data: Dict[str, Any]) -> str:
+    async def generate_explanation(self, signal_data: Dict[str, Any], api_key: Optional[str] = None) -> str:
         symbol = signal_data.get("symbol", "")
         setup = signal_data.get("setup", "")
         side = signal_data.get("side", "")
@@ -50,8 +50,18 @@ class LLMExplainer:
         t2 = signal_data.get("target_2", 0.0)
         reasons = signal_data.get("reasons", [])
 
+        # Active or user-provided Gemini model
+        key = api_key or self.api_key
+        model = self.model
+        if key and (not model or key != self.api_key):
+            try:
+                genai.configure(api_key=key)
+                model = genai.GenerativeModel(settings.GEMINI_MODEL)
+            except Exception as e:
+                logger.warning(f"Could not initialize custom Gemini key: {e}")
+
         # If Gemini is configured, prompt it under strict constraints
-        if self.model:
+        if model:
             prompt = (
                 f"You are a trading decision-support assistant. Write a concise, 2-sentence plain-language summary "
                 f"explaining this technical trade suggestion for {symbol}. "

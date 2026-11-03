@@ -20,6 +20,34 @@ export function getBackendBaseUrl(): string {
   return 'https://trade-yccn.onrender.com';
 }
 
+const STORAGE_KEY_GEMINI_KEY = 'ai_trade_assist_gemini_api_key';
+
+export function getGeminiApiKey(): string {
+  return localStorage.getItem(STORAGE_KEY_GEMINI_KEY) || '';
+}
+
+export function setGeminiApiKey(key: string): void {
+  localStorage.setItem(STORAGE_KEY_GEMINI_KEY, key.trim());
+}
+
+export async function verifyGeminiApiKey(apiKey: string): Promise<{ valid: boolean; model?: string; error?: string }> {
+  const base = getBackendBaseUrl();
+  try {
+    const res = await fetch(`${base}/api/ai/verify-key`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return { valid: false, error: err.detail || `HTTP ${res.status}` };
+    }
+    return await res.json();
+  } catch (err: any) {
+    return { valid: false, error: err.message || String(err) };
+  }
+}
+
 export function setBackendBaseUrl(url: string): void {
   const cleanUrl = url.replace(/\/+$/, '');
   localStorage.setItem(STORAGE_KEY_API_HOST, cleanUrl);
@@ -69,10 +97,14 @@ export async function fetchSignals(limit: number = 30): Promise<SignalSuggestion
 
 export async function runDeepAnalysis(symbol: string, segment = 'CASH', style = 'INTRADAY'): Promise<AnalysisResponse | null> {
   const base = getBackendBaseUrl();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const userKey = getGeminiApiKey();
+  if (userKey) headers['X-Gemini-API-Key'] = userKey;
+
   try {
     const res = await fetch(`${base}/api/analyse`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ symbol, segment, style, direction: 'LONG', horizon_days: 1 }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
