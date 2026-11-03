@@ -226,6 +226,11 @@ export interface ScreenerCandidate {
   chart_analysis?: ChartAnalysisDetails;
   why_it_will_raise?: string[];
   session_timeline?: SessionTimeline;
+  ai_catalyst?: {
+    sentiment: string;
+    headline: string;
+    source: string;
+  };
 }
 
 export interface ScreenerResponse {

@@ -306,6 +306,15 @@ export const OpportunityRadar: React.FC<OpportunityRadarProps> = ({
                       </div>
                     </div>
 
+                    {/* AI Catalyst Live Tag (if available) */}
+                    {candidate.ai_catalyst && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-950/70 border border-indigo-500/30 text-[10px] text-indigo-300 font-medium my-2">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span className="font-bold text-amber-300 shrink-0">Live Catalyst:</span>
+                        <span className="truncate text-slate-300">{candidate.ai_catalyst.headline}</span>
+                      </div>
+                    )}
+
                     {/* Prediction Banner: Direction & Win Probability */}
                     <div className="flex items-center justify-between gap-2 my-2.5 p-2 rounded-xl bg-slate-950/80 border border-slate-800/80">
                       <span

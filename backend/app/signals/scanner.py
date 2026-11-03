@@ -8,9 +8,11 @@ from app.indicators.vwap import calculate_vwap_from_candles
 from app.indicators.ema import calculate_emas_for_candles
 from app.indicators.rsi import calculate_rsi
 from app.indicators.atr import calculate_atr_from_candles
+from app.ingest.news_ingestor import NewsIngestor
 from app.db import repo
 
 logger = logging.getLogger(__name__)
+_news_ingestor = NewsIngestor()
 
 HORIZON_CONFIGS = {
     "915_1500": {
@@ -286,6 +288,25 @@ async def scan_market_opportunities(horizon: str = "915_1500") -> Dict[str, Any]
 
                 setup_name = f"{horizon.upper()} Multi-Session Swing" if score > 0 else f"{horizon.upper()} Structural Breakdown"
 
+            # AI News & Catalyst Sentiment Ingestion
+            news_items = await _news_ingestor.get_news_for_symbol(sym)
+            ai_catalyst = None
+            if news_items:
+                top_item = news_items[0]
+                sent = top_item.get("sentiment", "NEUTRAL")
+                hd = top_item.get("headline", "")
+                ai_catalyst = {
+                    "sentiment": sent,
+                    "headline": hd,
+                    "source": top_item.get("source", "NSE Filing")
+                }
+                if sent == "POSITIVE":
+                    score += 1.5
+                    reasons.append(f"AI Catalyst Ingestion: Positive corporate disclosure ('{hd[:50]}...')")
+                elif sent == "NEGATIVE":
+                    score -= 2.5
+                    reasons.append(f"AI Catalyst Ingestion: Adverse headline disclosure ('{hd[:50]}...')")
+
             # Probability and grades
             abs_score = abs(score)
             probability = min(89, max(62, int(60 + (abs_score * 3.5))))
@@ -321,6 +342,7 @@ async def scan_market_opportunities(horizon: str = "915_1500") -> Dict[str, Any]
                     "confidence_grade": grade,
                     "setup": setup_name,
                     "reasons": reasons,
+                    "ai_catalyst": ai_catalyst,
                     "time_horizon": horizon,
                     "profile": {
                         "market_cap": inst.get("market_cap", "Large Cap"),
@@ -381,6 +403,7 @@ async def scan_market_opportunities(horizon: str = "915_1500") -> Dict[str, Any]
                     "confidence_grade": grade,
                     "setup": setup_name,
                     "reasons": reasons,
+                    "ai_catalyst": ai_catalyst,
                     "time_horizon": horizon,
                     "profile": {
                         "market_cap": inst.get("market_cap", "Large Cap"),
