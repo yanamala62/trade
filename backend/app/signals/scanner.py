@@ -192,6 +192,26 @@ async def scan_market_opportunities(horizon: str = "915_1500") -> Dict[str, Any]
                     score += 2
                     reasons.append(f"Institutional Inflow: Volume surge of {vol_surge}x standard session volume")
 
+                # Enhanced VSA (Volume Spread Analysis) & Multi-Timeframe Alignment
+                c_high = candle_list[-1].get("high", ltp)
+                c_low = candle_list[-1].get("low", ltp)
+                c_range = c_high - c_low
+                if c_range > 0:
+                    close_location = (ltp - c_low) / c_range
+                    if close_location >= 0.70:
+                        score += 1.5
+                        reasons.append(f"VSA Bullish Demand: 5m candle closed in top {int((1 - close_location)*100)}% of range (strong buying absorption)")
+                    elif close_location <= 0.30:
+                        score -= 1.5
+                        reasons.append(f"VSA Supply Pressure: 5m candle closed near low (institutional selling resistance)")
+
+                if ltp > ema_50 and ema_9 > ema_21 > ema_50:
+                    score += 2
+                    reasons.append("Triple Moving Average Alignment: Price > EMA 9 > EMA 21 > EMA 50 (Master Bullish Trend Stack)")
+                elif ltp < ema_50 and ema_9 < ema_21 < ema_50:
+                    score -= 2
+                    reasons.append("Triple Moving Average Breakdown: Price < EMA 9 < EMA 21 < EMA 50 (Master Bearish Stack)")
+
                 setup_name = "09:15-15:00 High-Beta Session Runner" if score > 0 else "09:15-15:00 Intraday Short Breakdown"
 
             elif horizon == "10m":
@@ -268,8 +288,8 @@ async def scan_market_opportunities(horizon: str = "915_1500") -> Dict[str, Any]
 
             # Probability and grades
             abs_score = abs(score)
-            probability = min(89, max(62, int(60 + (abs_score * 3.8))))
-            grade = "A" if probability >= 75 else "B"
+            probability = min(89, max(62, int(60 + (abs_score * 3.5))))
+            grade = "A+" if probability >= 82 else ("A" if probability >= 74 else "B")
 
             # Intraday dynamic move based on beta, ATR and probability
             if horizon == "915_1500":
