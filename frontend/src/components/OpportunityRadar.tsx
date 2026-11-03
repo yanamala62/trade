@@ -5,30 +5,22 @@ import {
   Clock,
   RefreshCw,
   Search,
-  SlidersHorizontal,
-  ChevronDown,
   CheckCircle2,
   AlertCircle,
-  ExternalLink,
   Zap,
   Target,
-  ShieldAlert,
   BarChart2,
-  Maximize2,
-  Split,
-  Eye,
   FileText,
-  Info,
   X,
-  Compass,
-  Calendar,
-  Layers,
+  Activity,
   ArrowUpRight,
   ShieldCheck,
-  Activity,
+  Calendar,
+  Layers,
+  Sparkles,
+  ExternalLink,
 } from 'lucide-react';
-import { LiveChart } from './LiveChart';
-import { ScreenerResponse, ScreenerCandidate, TickData, SignalSuggestion } from '../types';
+import { ScreenerResponse, ScreenerCandidate, TickData } from '../types';
 import { fetchScreenerOpportunities, trackNewTrade } from '../services/api';
 
 interface OpportunityRadarProps {
@@ -49,13 +41,6 @@ const HORIZON_OPTIONS = [
   { value: '1w', label: 'Next 1 Week', badge: 'Weekly Positional', icon: '📆' },
 ];
 
-const ALL_POPULAR_SYMBOLS = [
-  'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK',
-  'SBIN', 'BHARTIARTL', 'ITC', 'KOTAKBANK', 'LT',
-  'AXISBANK', 'HINDUNILVR', 'TATAMOTORS', 'BAJFINANCE', 'MARUTI',
-  'TITAN', 'SUNPHARMA', 'TATASTEEL', 'WIPRO', 'NTPC'
-];
-
 export const OpportunityRadar: React.FC<OpportunityRadarProps> = ({
   ticks,
   selectedSymbol,
@@ -68,7 +53,6 @@ export const OpportunityRadar: React.FC<OpportunityRadarProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [filterDirection, setFilterDirection] = useState<'ALL' | 'RISE' | 'FALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [layoutMode, setLayoutMode] = useState<'SPLIT' | 'CHART_FOCUS' | 'RADAR_FOCUS'>('SPLIT');
   const [trackedId, setTrackedId] = useState<string | null>(null);
   const [modalCandidate, setModalCandidate] = useState<ScreenerCandidate | null>(null);
 
@@ -90,33 +74,27 @@ export const OpportunityRadar: React.FC<OpportunityRadarProps> = ({
     ...(data?.bearish || []),
   ];
 
-  // Active candidate if selectedSymbol matches
-  const activeCandidate = allCandidates.find((c) => c.symbol === selectedSymbol);
-
   // Filtered by search & direction
   const displayCandidates = allCandidates
     .filter((c) => {
       if (filterDirection === 'RISE' && c.direction !== 'RISE') return false;
       if (filterDirection === 'FALL' && c.direction !== 'FALL') return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        return (
-          c.symbol.toLowerCase().includes(q) ||
-          c.name.toLowerCase().includes(q) ||
-          c.sector.toLowerCase().includes(q)
-        );
-      }
-      return true;
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        c.symbol.toLowerCase().includes(q) ||
+        c.name.toLowerCase().includes(q) ||
+        c.sector.toLowerCase().includes(q)
+      );
     });
 
-  // Handle Tracking a Candidate Trade
+  // Track trade handler
   const handleTrackCandidate = async (c: ScreenerCandidate) => {
     const isBuy = c.direction === 'RISE';
     const success = await trackNewTrade({
       symbol: c.symbol,
       side: isBuy ? 'BUY' : 'SELL',
       entry_price: c.ltp,
-      quantity: 50,
       stop_loss: c.stop_loss,
       target_1: c.target,
       target_2: isBuy ? Math.round(c.target * 1.015 * 100) / 100 : Math.round(c.target * 0.985 * 100) / 100,
@@ -130,553 +108,307 @@ export const OpportunityRadar: React.FC<OpportunityRadarProps> = ({
     }
   };
 
-  // Convert ScreenerCandidate to a pseudo-signal for LiveChart overlay
-  const activeChartSignal: SignalSuggestion | null = activeCandidate
-    ? {
-        id: `screener-${activeCandidate.symbol}-${activeCandidate.time_horizon}`,
-        symbol: activeCandidate.symbol,
-        setup: activeCandidate.setup,
-        side: activeCandidate.direction === 'RISE' ? 'BUY' : 'SELL',
-        entry: activeCandidate.ltp,
-        stop_loss: activeCandidate.stop_loss,
-        target_1: activeCandidate.target,
-        target_2: activeCandidate.target,
-        quantity: 50,
-        reward_risk: 2.0,
-        confidence_grade: activeCandidate.confidence_grade,
-        reasons: activeCandidate.reasons,
-      }
-    : null;
-
-  const currentTick = ticks[selectedSymbol] || null;
-
   return (
     <div className="flex flex-col h-full w-full bg-slate-950 text-slate-100 overflow-hidden">
-      {/* 1. TOP CONTROL BAR: HORIZON SELECTOR & ACTIONS */}
-      <div className="p-3 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
-        {/* Left: Dropdown & Horizon Title */}
+      {/* 1. TOP HEADER & HORIZON BAR */}
+      <div className="px-4 py-3 bg-slate-900/95 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shadow-md z-10">
+        {/* Title & Description */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-              <Target className="w-5 h-5 text-amber-400" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-white tracking-wide">
-                  AI Stock Opportunity Radar
-                </h2>
-                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  {data?.horizon_label || horizon}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                09:15 AM Buy to 15:00 PM Square-off strategy. Identifies stocks likely to <span className="text-emerald-400 font-semibold">RISE MORE</span> with full chart analytics.
-              </p>
+          <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500/20 to-amber-500/20 text-amber-400 border border-indigo-500/30">
+            <Target className="w-5 h-5 text-amber-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-white tracking-wide flex items-center gap-1.5">
+                AI Stock Predictions
+              </h1>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <Sparkles className="w-3 h-3" /> Live Market Scanner
+              </span>
             </div>
+            <p className="text-xs text-slate-400">
+              09:15 AM Buy ➔ 15:00 PM Square-off strategy. Identifies high-momentum stocks engineered to rise the most.
+            </p>
           </div>
         </div>
 
-        {/* Center: Dropdown & Timeframe Pills */}
+        {/* Action Buttons: Refresh & Chart Shortcut */}
         <div className="flex items-center gap-2">
-          {/* Native Dropdown Selector */}
-          <div className="relative">
-            <select
-              value={horizon}
-              onChange={(e) => setHorizon(e.target.value)}
-              className="appearance-none bg-slate-950 border border-indigo-500/40 text-indigo-300 font-semibold text-xs rounded-lg px-3 py-1.5 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-sm hover:border-indigo-400 transition"
+          {onNavigateToTerminal && (
+            <button
+              onClick={onNavigateToTerminal}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+              title="Open Candlestick Chart View"
             >
-              {HORIZON_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value} className="bg-slate-900 text-white">
-                  {opt.icon} {opt.label} ({opt.badge})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-indigo-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
+              <BarChart2 className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Open Live Charts</span>
+            </button>
+          )}
 
-          {/* Quick Horizon Pills (Desktop) */}
-          <div className="hidden lg:flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
-            {HORIZON_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setHorizon(opt.value)}
-                className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition ${
-                  horizon === opt.value
-                    ? 'bg-indigo-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {opt.value === '915_1500' ? '🎯 09:15-15:00' : opt.value}
-              </button>
-            ))}
-          </div>
-
-          {/* Refresh Button */}
           <button
             onClick={() => loadOpportunities(horizon)}
             disabled={isLoading}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition disabled:opacity-50"
-            title="Refresh AI Opportunities"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition disabled:opacity-50"
+            title="Scan latest live market data"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-indigo-400' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>{isLoading ? 'Scanning...' : 'Refresh Predictions'}</span>
           </button>
-
-          {/* Layout Mode Toggles */}
-          <div className="hidden md:flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-xs">
-            <button
-              onClick={() => setLayoutMode('SPLIT')}
-              className={`p-1.5 rounded ${layoutMode === 'SPLIT' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-              title="Split View (Chart + Radar)"
-            >
-              <Split className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setLayoutMode('RADAR_FOCUS')}
-              className={`p-1.5 rounded ${layoutMode === 'RADAR_FOCUS' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-              title="Radar Cards Focus"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setLayoutMode('CHART_FOCUS')}
-              className={`p-1.5 rounded ${layoutMode === 'CHART_FOCUS' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-              title="Full Live Chart Focus"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* 2. STRATEGY BANNER & HORIZON INSIGHT */}
-      <div className="px-4 py-2 bg-slate-900/60 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">Target Horizon:</span>
-            <span className="font-semibold text-white">{data?.horizon_label}</span>
-          </div>
-          <div className="hidden sm:flex items-center gap-1.5 text-slate-400 border-l border-slate-800 pl-4">
-            <span>Model Strategy:</span>
-            <span className="text-indigo-300 font-mono font-medium">
-              {horizon === '915_1500'
-                ? 'Opening Drive, ATR-14 Volatility & Institutional VWAP'
-                : horizon === '10m'
-                ? 'VWAP & 5m Volume Surge'
-                : horizon === '1h'
-                ? 'EMA 9/21 Trend & Volume'
-                : 'EMA 21/50 Multi-Session Swing'}
-            </span>
-          </div>
-          <div className="hidden xl:flex items-center gap-1.5 text-slate-400 border-l border-slate-800 pl-4">
-            <span className="italic">{data?.description}</span>
-          </div>
+      {/* 2. TIME HORIZON SELECTOR PILLS */}
+      <div className="px-4 py-2 bg-slate-900/60 border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto scrollbar-none text-xs">
+        <span className="text-slate-400 font-semibold text-[11px] uppercase shrink-0 flex items-center gap-1">
+          <Clock className="w-3.5 h-3.5 text-slate-500" /> Horizon:
+        </span>
+        {HORIZON_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setHorizon(opt.value)}
+            className={`px-3 py-1 rounded-lg text-xs font-medium shrink-0 flex items-center gap-1.5 transition ${
+              horizon === opt.value
+                ? 'bg-indigo-600 text-white font-bold shadow-sm'
+                : 'bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800'
+            }`}
+          >
+            <span>{opt.icon}</span>
+            <span>{opt.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* 3. FILTER TABS & SEARCH BAR */}
+      <div className="px-4 py-2.5 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        {/* Direction Filter Pills */}
+        <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs">
+          <button
+            onClick={() => setFilterDirection('ALL')}
+            className={`px-3 py-1 rounded-md font-semibold transition ${
+              filterDirection === 'ALL'
+                ? 'bg-slate-700 text-white'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            All Predictions ({allCandidates.length})
+          </button>
+          <button
+            onClick={() => setFilterDirection('RISE')}
+            className={`px-3 py-1 rounded-md font-semibold flex items-center gap-1.5 transition ${
+              filterDirection === 'RISE'
+                ? 'bg-emerald-600 text-white'
+                : 'text-emerald-400 hover:text-emerald-300'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Likely to Rise ({data?.bullish_count || 0})</span>
+          </button>
+          <button
+            onClick={() => setFilterDirection('FALL')}
+            className={`px-3 py-1 rounded-md font-semibold flex items-center gap-1.5 transition ${
+              filterDirection === 'FALL'
+                ? 'bg-rose-600 text-white'
+                : 'text-rose-400 hover:text-rose-300'
+            }`}
+          >
+            <TrendingDown className="w-3.5 h-3.5" />
+            <span>Likely to Fall ({data?.bearish_count || 0})</span>
+          </button>
         </div>
 
-        {/* Counter Badges */}
-        <div className="flex items-center gap-2 font-mono">
-          <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" />
-            {data?.bullish_count || 0} Likely to Rise
-          </span>
-          <span className="px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-400 font-bold flex items-center gap-1">
-            <TrendingDown className="w-3 h-3" />
-            {data?.bearish_count || 0} Likely to Fall
-          </span>
+        {/* Search Stock or Sector */}
+        <div className="relative flex-1 min-w-[180px] max-w-sm">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search stock or sector (e.g. INFY, Banking, Steel)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 text-xs rounded-lg pl-9 pr-3 py-1.5 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+          />
         </div>
       </div>
 
-      {/* 3. MAIN WORKSPACE: SPLIT GRID OR FULL CHART */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-        {/* PANEL A: OPPORTUNITY RADAR CARDS & SCREENER LIST */}
-        <div
-          className={`flex flex-col bg-slate-950 border-r border-slate-800 overflow-hidden transition-all ${
-            layoutMode === 'CHART_FOCUS'
-              ? 'hidden'
-              : layoutMode === 'RADAR_FOCUS'
-              ? 'w-full'
-              : 'lg:w-[50%] xl:w-[46%] w-full h-1/2 lg:h-full'
-          }`}
-        >
-          {/* Sub-header: Search & Direction Filter Tabs */}
-          <div className="p-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
-            {/* Filter Direction Pills */}
-            <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-xs">
-              <button
-                onClick={() => setFilterDirection('ALL')}
-                className={`px-2.5 py-1 rounded-md font-semibold transition ${
-                  filterDirection === 'ALL'
-                    ? 'bg-slate-700 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                All ({allCandidates.length})
-              </button>
-              <button
-                onClick={() => setFilterDirection('RISE')}
-                className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 transition ${
-                  filterDirection === 'RISE'
-                    ? 'bg-emerald-600 text-white'
-                    : 'text-emerald-400 hover:text-emerald-300'
-                }`}
-              >
-                <TrendingUp className="w-3 h-3" />
-                <span>Rise ({data?.bullish_count || 0})</span>
-              </button>
-              <button
-                onClick={() => setFilterDirection('FALL')}
-                className={`px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 transition ${
-                  filterDirection === 'FALL'
-                    ? 'bg-rose-600 text-white'
-                    : 'text-rose-400 hover:text-rose-300'
-                }`}
-              >
-                <TrendingDown className="w-3 h-3" />
-                <span>Fall ({data?.bearish_count || 0})</span>
-              </button>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative flex-1 min-w-[140px] max-w-xs">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Filter stock or sector..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-xs rounded-lg pl-8 pr-3 py-1.5 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-              />
-            </div>
+      {/* 4. MAIN PREDICTIONS GRID (CLEAN, USER-FRIENDLY CARDS) */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-950">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center h-80 text-slate-400 gap-3">
+            <RefreshCw className="w-10 h-10 animate-spin text-indigo-400" />
+            <p className="text-sm font-medium">Scanning liquid NSE stocks for {data?.horizon_label || horizon}...</p>
+            <p className="text-xs text-slate-500">Evaluating institutional VWAP, volume surge, and trend confluence...</p>
           </div>
+        ) : displayCandidates.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-80 text-slate-500 gap-3 bg-slate-900/40 rounded-2xl border border-slate-800 m-4">
+            <AlertCircle className="w-10 h-10 text-slate-600" />
+            <p className="text-sm font-semibold text-slate-300">No predictions matching your filter.</p>
+            <button
+              onClick={() => {
+                setFilterDirection('ALL');
+                setSearchQuery('');
+              }}
+              className="text-xs text-indigo-400 hover:underline"
+            >
+              Reset filters to show all predictions
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+            {displayCandidates.map((candidate, idx) => {
+              const isBull = candidate.direction === 'RISE';
+              const liveTick = ticks[candidate.symbol];
 
-          {/* Cards Scrollable Area */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center h-64 text-slate-400 gap-3">
-                <RefreshCw className="w-8 h-8 animate-spin text-indigo-400" />
-                <p className="text-xs font-medium">Scanning top NSE stocks for {horizon} horizon...</p>
-              </div>
-            ) : displayCandidates.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-48 text-slate-500 gap-2">
-                <AlertCircle className="w-8 h-8 text-slate-600" />
-                <p className="text-xs">No opportunities found matching criteria.</p>
-              </div>
-            ) : (
-              displayCandidates.map((candidate, idx) => {
-                const isBull = candidate.direction === 'RISE';
-                const isSelected = candidate.symbol === selectedSymbol;
-
-                return (
-                  <div
-                    key={`${candidate.symbol}-${candidate.direction}`}
-                    onClick={() => onSelectSymbol(candidate.symbol)}
-                    className={`p-3 rounded-xl border transition cursor-pointer relative overflow-hidden ${
-                      isSelected
-                        ? isBull
-                          ? 'bg-emerald-950/20 border-emerald-500/60 ring-1 ring-emerald-500/40 shadow-lg'
-                          : 'bg-rose-950/20 border-rose-500/60 ring-1 ring-rose-500/40 shadow-lg'
-                        : 'bg-slate-900/90 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
-                    }`}
-                  >
-                    {/* Top Row: Symbol, Rank, Direction Badge & Expected Move */}
+              return (
+                <div
+                  key={`${candidate.symbol}-${candidate.direction}`}
+                  className={`flex flex-col justify-between rounded-2xl border p-4 transition-all duration-200 shadow-lg relative overflow-hidden ${
+                    isBull
+                      ? 'bg-gradient-to-b from-slate-900/90 to-emerald-950/20 border-slate-800 hover:border-emerald-500/50 hover:shadow-emerald-950/20'
+                      : 'bg-gradient-to-b from-slate-900/90 to-rose-950/20 border-slate-800 hover:border-rose-500/50 hover:shadow-rose-950/20'
+                  }`}
+                >
+                  {/* Top Card Header: Rank, Symbol, Sector, Live Price */}
+                  <div>
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div>
                         <div className="flex items-center gap-2">
                           {horizon === '915_1500' && isBull && (
-                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold border border-amber-500/30">
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold border border-amber-500/30">
                               #{idx + 1} MAX RISER
                             </span>
                           )}
-                          <span className="font-bold text-white text-sm tracking-wide">
+                          <span className="font-extrabold text-white text-base tracking-wide">
                             {candidate.symbol}
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-medium">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium">
                             {candidate.sector}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                        <p className="text-xs text-slate-400 truncate max-w-[220px] mt-0.5">
                           {candidate.name}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {/* Direction Badge */}
-                        <span
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold font-mono ${
-                            isBull
-                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                          }`}
-                        >
-                          {isBull ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                          {isBull ? 'RISE' : 'FALL'} {candidate.expected_pct > 0 ? `+${candidate.expected_pct}%` : `${candidate.expected_pct}%`}
-                        </span>
-
-                        {/* Probability Grade */}
-                        <div className="text-right font-mono">
-                          <span
-                            className={`text-xs font-bold ${
-                              candidate.probability >= 80
-                                ? 'text-emerald-400'
-                                : candidate.probability >= 70
-                                ? 'text-amber-400'
-                                : 'text-slate-300'
+                      {/* Current Live Tick Price */}
+                      <div className="text-right font-mono">
+                        <div className="text-sm font-bold text-white">
+                          ₹{liveTick ? liveTick.ltp.toFixed(2) : candidate.ltp.toFixed(2)}
+                        </div>
+                        {liveTick && (
+                          <div
+                            className={`text-[11px] font-semibold ${
+                              liveTick.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'
                             }`}
                           >
-                            {candidate.probability}%
-                          </span>
-                          <span className="text-[10px] text-slate-500 ml-1">
-                            Gr.{candidate.confidence_grade}
-                          </span>
-                        </div>
+                            {liveTick.change_pct >= 0 ? '+' : ''}
+                            {liveTick.change_pct.toFixed(2)}%
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* Middle Row: Price Metrics & Profile Quick Strip */}
-                    <div className="grid grid-cols-4 gap-2 py-2 px-2.5 rounded-lg bg-slate-950/70 border border-slate-800/80 font-mono text-xs mb-2">
-                      <div>
-                        <div className="text-[10px] text-slate-500 font-sans uppercase">09:15 Buy</div>
-                        <div className="font-bold text-white">₹{candidate.ltp.toFixed(2)}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-emerald-400/80 font-sans uppercase">15:00 Target</div>
-                        <div className="font-bold text-emerald-400">₹{candidate.target.toFixed(2)}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-rose-400/80 font-sans uppercase">Stop Loss</div>
-                        <div className="font-bold text-rose-400">₹{candidate.stop_loss.toFixed(2)}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-indigo-400/80 font-sans uppercase">Beta / ATR</div>
-                        <div className="font-bold text-indigo-300">
-                          {candidate.profile?.beta ? `${candidate.profile.beta}β` : '1.1β'}
-                          <span className="text-[10px] text-slate-400 font-normal ml-1">
-                            ₹{candidate.profile?.atr_14 || '---'}
-                          </span>
-                        </div>
+                    {/* Prediction Banner: Direction & Win Probability */}
+                    <div className="flex items-center justify-between gap-2 my-2.5 p-2 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                      <span
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold font-mono tracking-wide ${
+                          isBull
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                        }`}
+                      >
+                        {isBull ? <TrendingUp className="w-4 h-4 text-emerald-400" /> : <TrendingDown className="w-4 h-4 text-rose-400" />}
+                        <span>{isBull ? '▲ PREDICTED TO RISE' : '▼ PREDICTED TO FALL'} {candidate.expected_pct > 0 ? `+${candidate.expected_pct}%` : `${candidate.expected_pct}%`}</span>
+                      </span>
+
+                      <div className="text-right font-mono flex items-center gap-1 text-xs">
+                        <span className="font-bold text-amber-300">{candidate.probability}% Prob</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-indigo-300 font-bold">
+                          Gr. {candidate.confidence_grade}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Setup Name & Reasons */}
-                    <div className="mb-2.5">
-                      <div className="text-[11px] font-semibold text-indigo-300 flex items-center gap-1 mb-1">
+                    {/* Exact Price Matrix (09:15 Buy -> 15:00 Target) */}
+                    <div className="grid grid-cols-4 gap-1.5 p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 font-mono text-center mb-3">
+                      <div>
+                        <div className="text-[10px] text-slate-500 font-sans uppercase font-medium">09:15 Buy</div>
+                        <div className="text-xs font-bold text-white mt-0.5">₹{candidate.ltp.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-emerald-400 font-sans uppercase font-medium">15:00 Target</div>
+                        <div className="text-xs font-bold text-emerald-400 mt-0.5">₹{candidate.target.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-rose-400 font-sans uppercase font-medium">Stop Loss</div>
+                        <div className="text-xs font-bold text-rose-400 mt-0.5">₹{candidate.stop_loss.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-indigo-300 font-sans uppercase font-medium">R : R</div>
+                        <div className="text-xs font-bold text-indigo-300 mt-0.5">{candidate.profile?.risk_reward_ratio || '1:2.5'}</div>
+                      </div>
+                    </div>
+
+                    {/* Why It Will Raise Preview Bullets */}
+                    <div className="mb-3 space-y-1">
+                      <div className="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
                         <Zap className="w-3 h-3 text-amber-400" />
-                        <span>{candidate.setup}</span>
+                        <span>Why This Stock Was Picked:</span>
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {candidate.reasons.slice(0, 3).map((r, i) => (
-                          <span
-                            key={i}
-                            className="text-[10px] px-2 py-0.5 rounded bg-slate-800/90 text-slate-300 border border-slate-700/60"
-                          >
-                            {r}
-                          </span>
+                      <div className="space-y-1 text-[11px] text-slate-400">
+                        {candidate.reasons.slice(0, 2).map((r, i) => (
+                          <div key={i} className="flex items-start gap-1.5 leading-tight">
+                            <span className="text-emerald-400 font-bold shrink-0 mt-0.5">•</span>
+                            <span className="line-clamp-1">{r}</span>
+                          </div>
                         ))}
                       </div>
                     </div>
-
-                    {/* Bottom Action Bar: Open Chart Analysis Modal */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setModalCandidate(candidate);
-                          }}
-                          className="flex items-center gap-1 px-2 py-1 rounded bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-500/30 font-semibold transition"
-                        >
-                          <FileText className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Chart & Why It Raises</span>
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectSymbol(candidate.symbol);
-                          }}
-                          className="flex items-center gap-1 text-slate-400 hover:text-slate-200 font-medium ml-1"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Live Chart</span>
-                        </button>
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTrackCandidate(candidate);
-                        }}
-                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border transition ${
-                          trackedId === candidate.symbol
-                            ? 'bg-emerald-600 border-emerald-500 text-white'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-                        }`}
-                      >
-                        {trackedId === candidate.symbol ? (
-                          <>
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>Tracked!</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-3 h-3 text-slate-400" />
-                            <span>Track Trade</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
                   </div>
-                );
-              })
-            )}
-          </div>
-        </div>
 
-        {/* PANEL B: DEDICATED LIVE FULL CHART & STOCK CHOOSER */}
-        <div
-          className={`flex-1 flex flex-col bg-slate-900 overflow-hidden ${
-            layoutMode === 'RADAR_FOCUS' ? 'hidden' : 'flex'
-          }`}
-        >
-          {/* Chart Header Bar with Stock Picker */}
-          <div className="p-3 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
-            {/* Stock Chooser & Info */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-400 font-medium">Stock:</span>
-                <div className="relative">
-                  <select
-                    value={selectedSymbol}
-                    onChange={(e) => onSelectSymbol(e.target.value)}
-                    className="appearance-none bg-slate-900 border border-slate-700 text-white font-bold text-sm rounded-lg px-3 py-1.5 pr-8 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer shadow-sm"
-                  >
-                    {ALL_POPULAR_SYMBOLS.map((sym) => (
-                      <option key={sym} value={sym}>
-                        {sym}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Current Price Ticker */}
-              {currentTick && (
-                <div className="flex items-center gap-2 font-mono text-xs">
-                  <span className="text-white font-bold text-sm">₹{currentTick.ltp.toFixed(2)}</span>
-                  <span
-                    className={`font-semibold px-1.5 py-0.5 rounded text-[11px] ${
-                      currentTick.change_pct >= 0
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-rose-500/20 text-rose-400'
-                    }`}
-                  >
-                    {currentTick.change_pct >= 0 ? '+' : ''}
-                    {currentTick.change_pct.toFixed(2)}%
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Active Prediction Summary Pill */}
-            {activeCandidate && (
-              <div
-                className={`hidden md:flex items-center gap-2 px-3 py-1 rounded-lg border text-xs font-mono ${
-                  activeCandidate.direction === 'RISE'
-                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-                    : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
-                }`}
-              >
-                <span className="font-bold">
-                  {activeCandidate.time_horizon === '915_1500' ? '09:15-15:00 Day Runner' : activeCandidate.time_horizon}: {activeCandidate.direction === 'RISE' ? '▲ RISE' : '▼ FALL'} ({activeCandidate.expected_pct > 0 ? `+${activeCandidate.expected_pct}%` : `${activeCandidate.expected_pct}%`})
-                </span>
-                <span className="text-slate-400">|</span>
-                <span>Tgt: ₹{activeCandidate.target}</span>
-                <span className="text-slate-400">|</span>
-                <span>SL: ₹{activeCandidate.stop_loss}</span>
-                <span className="text-slate-400">|</span>
-                <span className="font-bold">{activeCandidate.probability}% Win Prob</span>
-              </div>
-            )}
-
-            {/* Quick Navigation to Replay / Terminal */}
-            <div className="flex items-center gap-2">
-              {activeCandidate && (
-                <button
-                  onClick={() => setModalCandidate(activeCandidate)}
-                  className="px-2.5 py-1 rounded bg-indigo-950 border border-indigo-500/40 text-indigo-300 text-xs font-semibold hover:bg-indigo-900/60 transition flex items-center gap-1"
-                >
-                  <FileText className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Full Profile & Why It Raises</span>
-                </button>
-              )}
-              {onNavigateToReplay && (
-                <button
-                  onClick={onNavigateToReplay}
-                  className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition"
-                >
-                  Time Machine Replay
-                </button>
-              )}
-              {onNavigateToTerminal && (
-                <button
-                  onClick={onNavigateToTerminal}
-                  className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm transition"
-                >
-                  Open in Terminal
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Live Chart Container */}
-          <div className="flex-1 relative overflow-hidden">
-            <LiveChart
-              symbol={selectedSymbol}
-              activeSignal={activeChartSignal}
-              latestTick={currentTick}
-            />
-          </div>
-
-          {/* Bottom Stock Selector Quick Ribbon */}
-          <div className="p-2 bg-slate-950 border-t border-slate-800 flex items-center gap-1.5 overflow-x-auto text-xs scrollbar-none">
-            <span className="text-[11px] text-slate-500 font-semibold px-2 uppercase shrink-0">Quick Select:</span>
-            {ALL_POPULAR_SYMBOLS.map((sym) => {
-              const tick = ticks[sym];
-              const isSelected = sym === selectedSymbol;
-              const hasRadarBull = data?.bullish.some((b) => b.symbol === sym);
-              const hasRadarBear = data?.bearish.some((b) => b.symbol === sym);
-
-              return (
-                <button
-                  key={sym}
-                  onClick={() => onSelectSymbol(sym)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-mono font-medium shrink-0 flex items-center gap-1.5 transition ${
-                    isSelected
-                      ? 'bg-indigo-600 text-white font-bold shadow'
-                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  <span>{sym}</span>
-                  {hasRadarBull && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Predicted to Rise"></span>}
-                  {hasRadarBear && <span className="w-1.5 h-1.5 rounded-full bg-rose-400" title="Predicted to Fall"></span>}
-                  {tick && (
-                    <span
-                      className={`text-[10px] ${
-                        tick.change_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      }`}
+                  {/* Card Bottom Actions */}
+                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-2">
+                    <button
+                      onClick={() => setModalCandidate(candidate)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition"
                     >
-                      {tick.change_pct >= 0 ? '+' : ''}{tick.change_pct.toFixed(1)}%
-                    </span>
-                  )}
-                </button>
+                      <FileText className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Why It Raises & Profile</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleTrackCandidate(candidate)}
+                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                        trackedId === candidate.symbol
+                          ? 'bg-emerald-600 border-emerald-500 text-white'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                      }`}
+                      title="Save and track this prediction in Trade Journal"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">{trackedId === candidate.symbol ? 'Tracked' : 'Track'}</span>
+                    </button>
+
+                    {onNavigateToTerminal && (
+                      <button
+                        onClick={() => {
+                          onSelectSymbol(candidate.symbol);
+                          onNavigateToTerminal();
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition"
+                        title="View Candlestick Chart in Terminal"
+                      >
+                        <BarChart2 className="w-3.5 h-3.5 text-sky-400" />
+                        <span className="hidden sm:inline">Chart</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* 4. MODAL: FULL STOCK INTRADAY PROFILE & CHART ANALYSIS REPORT */}
+      {/* 5. IN-DEPTH PROFILE & ANALYSIS MODAL */}
       {modalCandidate && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
@@ -730,7 +462,7 @@ export const OpportunityRadar: React.FC<OpportunityRadarProps> = ({
                   </div>
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
                     <div className="text-[10px] text-slate-500 font-sans uppercase">Risk-Reward Ratio</div>
-                    <div className="text-sm font-bold text-emerald-400">{modalCandidate.profile?.risk_reward_ratio || '1:4.5'}</div>
+                    <div className="text-sm font-bold text-emerald-400">{modalCandidate.profile?.risk_reward_ratio || '1:2.5'}</div>
                     <div className="text-[10px] text-slate-400 font-sans mt-0.5">Asymmetric edge</div>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
@@ -759,11 +491,11 @@ export const OpportunityRadar: React.FC<OpportunityRadarProps> = ({
                 </ul>
               </div>
 
-              {/* SECTION C: HOW THE AI ANALYZED THE CHART (TECHNICAL BREAKDOWN) */}
+              {/* SECTION C: TECHNICAL BREAKDOWN */}
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-300 mb-2.5 flex items-center gap-1.5">
                   <BarChart2 className="w-4 h-4 text-indigo-400" />
-                  <span>Technical Chart & Indicator Breakdown (How We Analyzed This)</span>
+                  <span>Technical & Indicator Confluence (How We Analyzed This)</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
@@ -799,123 +531,105 @@ export const OpportunityRadar: React.FC<OpportunityRadarProps> = ({
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
                     <div className="font-semibold text-white mb-1 flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                      <span>4. Volume Participation & Intensity</span>
+                      <span>4. Volume Surge & Institutional Flow</span>
                     </div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      {modalCandidate.chart_analysis?.volume_intensity || 'Higher institutional participation confirmed via volume burst.'}
+                      {modalCandidate.chart_analysis?.volume_intensity || 'Volume exceeds average session participation.'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* SECTION D: EXACT PRICE LEVELS MATRIX */}
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono">
-                <div className="text-[11px] font-bold text-slate-300 font-sans uppercase mb-2">
-                  Key Price Levels Matrix (Execution Parameters)
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] text-slate-500 font-sans block">09:15 AM Buy Entry</span>
-                    <span className="text-white font-bold">₹{modalCandidate.ltp.toFixed(2)}</span>
+              {/* SECTION D: SESSION EXECUTION TIMELINE */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-3 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-amber-400" />
+                  <span>Intraday Execution Plan & Timeline</span>
+                </h4>
+                <div className="space-y-3 font-mono">
+                  <div className="flex items-start gap-3">
+                    <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[10px] shrink-0">
+                      09:15 AM
+                    </span>
+                    <p className="text-[11px] text-slate-300 font-sans">
+                      {modalCandidate.session_timeline?.phase_0915_entry || `Buy at 09:15 open near ₹${modalCandidate.ltp}. Initial Stop Loss at ₹${modalCandidate.stop_loss}.`}
+                    </p>
                   </div>
-                  <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] text-emerald-400 font-sans block">15:00 PM Square-off Target</span>
-                    <span className="text-emerald-400 font-bold">₹{modalCandidate.target.toFixed(2)}</span>
+                  <div className="flex items-start gap-3">
+                    <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold text-[10px] shrink-0">
+                      11:30 AM
+                    </span>
+                    <p className="text-[11px] text-slate-300 font-sans">
+                      {modalCandidate.session_timeline?.phase_1130_hold || 'Trail Stop Loss to breakeven once +1.0% gain is secured.'}
+                    </p>
                   </div>
-                  <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] text-rose-400 font-sans block">Stop Loss (Invalidation)</span>
-                    <span className="text-rose-400 font-bold">₹{modalCandidate.stop_loss.toFixed(2)}</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] text-amber-400 font-sans block">Session VWAP Floor</span>
-                    <span className="text-amber-300 font-bold">₹{modalCandidate.chart_analysis?.key_levels?.vwap_support || '---'}</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] text-sky-400 font-sans block">EMA 9 Dynamic Trend</span>
-                    <span className="text-sky-300 font-bold">₹{modalCandidate.chart_analysis?.key_levels?.ema_9 || '---'}</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] text-purple-400 font-sans block">EMA 21 Base Floor</span>
-                    <span className="text-purple-300 font-bold">₹{modalCandidate.chart_analysis?.key_levels?.ema_21 || '---'}</span>
+                  <div className="flex items-start gap-3">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[10px] shrink-0">
+                      15:00 PM
+                    </span>
+                    <p className="text-[11px] text-slate-300 font-sans">
+                      {modalCandidate.session_timeline?.phase_1500_exit || `Square-off at 15:00 PM near projected target ₹${modalCandidate.target}.`}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* SECTION E: 09:15 TO 15:00 EXECUTION TIMELINE */}
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2.5 flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-amber-400" />
-                  <span>Intraday Execution Roadmap (09:15 AM to 15:00 PM Timeline)</span>
-                </h4>
-                <div className="space-y-2.5 font-sans">
-                  <div className="flex items-start gap-3">
-                    <div className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono font-bold text-[10px] shrink-0 mt-0.5">
-                      09:15 AM - 09:30 AM
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">Opening Fill & Validation</p>
-                      <p className="text-[11px] text-slate-400">
-                        {modalCandidate.session_timeline?.phase_0915_entry || `Buy near ₹${modalCandidate.ltp} on 5m opening confirmation above morning tick.`}
-                      </p>
-                    </div>
+              {/* SECTION E: KEY MATHEMATICAL LEVELS */}
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono">
+                <div className="text-[11px] font-sans font-semibold text-slate-400 mb-2">Key Mathematical Price Levels:</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                  <div className="bg-slate-900 p-2 rounded-lg">
+                    <span className="text-[10px] text-slate-500 block">Buy / Entry</span>
+                    <span className="font-bold text-white">₹{modalCandidate.chart_analysis?.key_levels?.entry_0915 || modalCandidate.ltp}</span>
                   </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono font-bold text-[10px] shrink-0 mt-0.5">
-                      11:30 AM - 13:00 PM
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">Midday Consolidation & Trailing Stop</p>
-                      <p className="text-[11px] text-slate-400">
-                        {modalCandidate.session_timeline?.phase_1130_hold || 'Trail Stop Loss to breakeven or session VWAP once +1% profit is attained.'}
-                      </p>
-                    </div>
+                  <div className="bg-slate-900 p-2 rounded-lg">
+                    <span className="text-[10px] text-emerald-400 block">15:00 Target</span>
+                    <span className="font-bold text-emerald-400">₹{modalCandidate.chart_analysis?.key_levels?.target_1500 || modalCandidate.target}</span>
                   </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold text-[10px] shrink-0 mt-0.5">
-                      14:55 PM - 15:00 PM
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">Closing Expansion & Square-off Exit</p>
-                      <p className="text-[11px] text-slate-400">
-                        {modalCandidate.session_timeline?.phase_1500_exit || `Square-off position near ₹${modalCandidate.target} (+${modalCandidate.expected_pct}%) before MIS market close.`}
-                      </p>
-                    </div>
+                  <div className="bg-slate-900 p-2 rounded-lg">
+                    <span className="text-[10px] text-rose-400 block">Stop Loss</span>
+                    <span className="font-bold text-rose-400">₹{modalCandidate.chart_analysis?.key_levels?.stop_loss || modalCandidate.stop_loss}</span>
+                  </div>
+                  <div className="bg-slate-900 p-2 rounded-lg">
+                    <span className="text-[10px] text-indigo-400 block">Session VWAP</span>
+                    <span className="font-bold text-indigo-300">₹{modalCandidate.chart_analysis?.key_levels?.vwap_support || '---'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Modal Footer */}
+            {/* Modal Footer Actions */}
             <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-3">
-              <div className="text-[11px] text-slate-400">
-                LTP: <span className="font-bold text-white font-mono">₹{modalCandidate.ltp.toFixed(2)}</span>
-                <span className="mx-2">•</span>
-                Projected Target: <span className="font-bold text-emerald-400 font-mono">₹{modalCandidate.target.toFixed(2)} (+{modalCandidate.expected_pct}%)</span>
-              </div>
+              <button
+                onClick={() => setModalCandidate(null)}
+                className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700 transition"
+              >
+                Close
+              </button>
 
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    onSelectSymbol(modalCandidate.symbol);
-                    setModalCandidate(null);
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-sm transition flex items-center gap-1.5"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Inspect on Live Chart</span>
-                </button>
+                {onNavigateToTerminal && (
+                  <button
+                    onClick={() => {
+                      onSelectSymbol(modalCandidate.symbol);
+                      setModalCandidate(null);
+                      onNavigateToTerminal();
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition"
+                  >
+                    <BarChart2 className="w-4 h-4 text-sky-400" />
+                    <span>View Candlestick Chart</span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => {
                     handleTrackCandidate(modalCandidate);
-                    setModalCandidate(null);
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-sm transition flex items-center gap-1.5"
+                  className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Track in Journal</span>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{trackedId === modalCandidate.symbol ? 'Tracked in Journal!' : 'Track Trade'}</span>
                 </button>
               </div>
             </div>

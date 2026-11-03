@@ -257,7 +257,7 @@ export function App() {
             }`}
           >
             <Target className="w-4 h-4 text-amber-400" />
-            <span className="font-semibold">Opportunity Radar</span>
+            <span className="font-semibold">AI Predictions</span>
           </button>
           <button
             onClick={() => setActiveTab('TERMINAL')}
@@ -455,7 +455,7 @@ export function App() {
           }`}
         >
           <Target className="w-5 h-5 mb-0.5 text-amber-400" />
-          <span>Radar</span>
+          <span>Predictions</span>
         </button>
         <button
           onClick={() => setActiveTab('TERMINAL')}
